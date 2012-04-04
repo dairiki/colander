@@ -1912,6 +1912,14 @@ class TestSchemaNode(unittest.TestCase):
         node = self._makeOne(None, 0)
         self.assertEqual(node.preparer, None)
 
+    def test_ctor_with_ignore_unbound_validator(self):
+        node = self._makeOne(None, 0, ignore_unbound_validator='iuv')
+        self.assertEqual(node.ignore_unbound_validator, 'iuv')
+
+    def test_ctor_without_ignore_unbound_validator(self):
+        node = self._makeOne(None, 0)
+        self.assertEqual(node.ignore_unbound_validator, False)
+
     def test_ctor_with_unknown_kwarg(self):
         node = self._makeOne(None, 0, foo=1)
         self.assertEqual(node.foo, 1)
@@ -1964,6 +1972,21 @@ class TestSchemaNode(unittest.TestCase):
         node = self._makeOne(typ, validator=validator)
         e = invalid_exc(node.deserialize, 1)
         self.assertEqual(e.msg, 'Wrong')
+
+    def test_deserialize_with_deferred_validator(self, ignore=False):
+        from colander import deferred
+        typ = DummyType()
+        validator = deferred(lambda node, kw: DummyValidator(msg='Wrong'))
+        node = self._makeOne(typ, validator=validator,
+                             ignore_unbound_validator=ignore)
+        if ignore:
+            self.assertEqual(node.deserialize(42), 42)
+        else:
+            from colander import UnboundDeferredError
+            self.assertRaises(UnboundDeferredError, node.deserialize, 42)
+
+    def test_deserialize_with_ignored_deferred_validator(self):
+        self.test_deserialize_with_deferred_validator(True)
 
     def test_deserialize_value_is_null_no_missing(self):
         from colander import null

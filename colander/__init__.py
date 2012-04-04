@@ -44,6 +44,17 @@ def interpolate(msgs):
         else:
             yield s
 
+class UnboundDeferredError(Exception):
+    """ An exception raised by :meth:`SchemaNode.deserialize` when an attempt
+    is made to deserialize a node which has an unbound :class:`deferred`
+    validator.
+
+    Prior to colander 0.9.8, deferred validators were silently
+    ignored.  You can revert to this behavior by setting the
+    ``ignore_unbound_validator`` attribute on the :class:`SchemaNode`.
+
+    """
+
 class Invalid(Exception):
     """
     An exception raised by data types and validators indicating that
@@ -1481,6 +1492,13 @@ class SchemaNode(object):
       The widget attribute is not interpreted by Colander itself, it
       is only meaningful to higher-level systems such as Deform.
 
+    - ``ignore_unbound_validator``: Boolean, default to ``False``.
+      Normally an :exc:`deform.UnboundDeferredError` will be raised if
+      :meth:`deserialize` on a node with an (unbound) :class:`deferred`
+      validator.  If ``ignore_unbound_validator`` is set to a trueish
+      value, then a deferred validator for that node will be silently
+      ignored.
+
     Arbitrary keyword arguments remaining will be attached to the node
     object unmolested.
     """
@@ -1507,6 +1525,8 @@ class SchemaNode(object):
         self.description = kw.pop('description', '')
         self.widget = kw.pop('widget', None)
         self.after_bind = kw.pop('after_bind', None)
+        self.ignore_unbound_validator = kw.pop('ignore_unbound_validator',
+                                               False)
         self.__dict__.update(kw)
         self.children = list(children)
 
@@ -1611,6 +1631,10 @@ class SchemaNode(object):
         if self.validator is not None:
             if not isinstance(self.validator, deferred): # unbound
                 self.validator(self, appstruct)
+            elif not self.ignore_unbound_validator:
+                raise UnboundDeferredError(
+                    "Schema node {node} has an unbound deferred validator"
+                    .format(node=self))
         return appstruct
 
     def add(self, node):

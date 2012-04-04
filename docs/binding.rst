@@ -248,12 +248,20 @@ If you use a schema with deferred ``validator``, ``missing`` or
 ``default`` attributes, but you use it to perform serialization and
 deserialization without calling its ``bind`` method:
 
-- If ``validator`` is deferred, no validation will be performed.
+- If ``validator`` is deferred, :meth:`~colander.SchemaNode.deserialize` will,
+  by default, raise an :exc:`~colander.UnboundDeferredError`.
+  This behavior may be modified by setting the node’s
+  ``ignore_unbound_validator`` attribute to a trueish value,
+  in which case the ``validator`` (if deferred) will be silently ignored.
 
 - If ``missing`` is deferred, the field will be considered *required*.
 
 - If ``default`` is deferred, the serialization default will be
   assumed to be ``colander.null``.
+
+.. note::
+
+  Prior to Colander 0.9.8, deferred validators were always silently ignored.
 
 See Also
 --------
@@ -261,4 +269,3 @@ See Also
 See also the :meth:`colander.SchemaNode.bind` method and the
 description of ``after_bind`` in the documentation of the
 :class:`colander.SchemaNode` constructor.
-
